@@ -16,7 +16,7 @@ InfluxDB - 8086
 
 Chronograph - 8888
 
-I was running all on wsl environment.
+I was running all on wsl2 environment.
 
 # Set up &amp; run the container
 ```
