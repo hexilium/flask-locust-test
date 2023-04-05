@@ -1,0 +1,121 @@
+version: '3'
+
+services:
+  master:
+    image: locustio/locust
+    container_name: locust-master
+    ports:
+     - "8089:8089"
+    volumes:
+      - ./:/mnt/locust
+    command: -f /mnt/locust/locustfile.py Index MoreLoad --master -H http://testapp:5000
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+    networks:
+      - flask_test_app
+
+  worker:
+    image: locustio/locust
+    container_name: locust-worker
+    volumes:
+      - ./:/mnt/locust
+    command: -f /mnt/locust/locustfile.py Index MoreLoad --worker --master-host master
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 2Gb
+        reservations:
+          cpus: '2'
+          memory: 1Gb
+    networks:
+      - flask_test_app
+
+  web:
+    build: .
+    container_name: testapp
+    restart: always
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/flask_test_app_v1
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 1Gb
+        reservations:
+          cpus: '2'
+          memory: 512Mb
+    networks:
+      - flask_test_app
+
+  influxdb:
+    image: influxdb:latest
+    container_name: influxdb
+    env_file:
+      - 'main.env'
+    volumes:
+      - ./influxdb/influx_init.iql:/docker-entrypoint-initdb.d/influx_init.iql
+    ports:
+      - "8086:8086"
+    networks:
+      - flask_test_app
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - '3000:3000'
+    volumes:
+      - ./grafana/provisioning/:/etc/grafana/provisioning/
+    env_file:
+      - 'main.env'
+    networks:
+      - flask_test_app
+    depends_on:
+      - influxdb
+
+#  chronograf:
+#    image: chronograf:latest
+#    container_name: chronograf
+#    ports:
+#      - '8888:8888'
+#    depends_on:
+#      - influxdb
+#    env_file:
+#      - 'main.env'
+#    networks:
+#      - flask_test_app
+
+  telegraf:
+    image: telegraf:latest
+    container_name: telegraf
+    environment:
+      HOST_PROC: /rootfs/proc
+      HOST_SYS: /rootfs/sys
+      HOST_ETC: /rootfs/etc
+      hostname: localhost
+    volumes:
+      - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /sys:/rootfs/sys:ro
+      - /proc:/rootfs/proc:ro
+      - /etc:/rootfs/etc:ro
+    env_file:
+      - ./main.env
+    depends_on:
+      - influxdb
+    networks:
+      - flask_test_app
+
+
+networks:
+  flask_test_app:
+    driver: bridge
