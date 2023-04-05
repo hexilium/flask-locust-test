@@ -82,17 +82,17 @@ services:
     depends_on:
       - influxdb
 
-#  chronograf:
-#    image: chronograf:latest
-#    container_name: chronograf
-#    ports:
-#      - '8888:8888'
-#    depends_on:
-#      - influxdb
-#    env_file:
-#      - 'main.env'
-#    networks:
-#      - flask_test_app
+ chronograf:
+   image: chronograf:latest
+   container_name: chronograf
+   ports:
+     - '8888:8888'
+   depends_on:
+     - influxdb
+   env_file:
+     - 'main.env'
+   networks:
+     - flask_test_app
 
   telegraf:
     image: telegraf:latest
